@@ -38,18 +38,18 @@ class Player
 
 };
 
-const uint8_t map_height = 5, map_width = 5;
+const uint8_t map_height = 5, map_width = 10;
 
 class Map
 {
 
     uint8_t map[map_height][map_width] =
     {
-        {1,0,1,0,1},
-        {1,0,0,0,1},
-        {1,0,0,0,1},
-        {0,0,0,0,1},
-        {1,0,1,0,1}
+        {1,0,1,0,1,1,1,1,1,1},
+        {1,0,0,0,1,1,0,0,0,1},
+        {1,0,0,0,1,1,0,0,0,1},
+        {0,0,0,0,0,0,0,0,0,1},
+        {1,0,1,0,1,1,0,1,0,1}
     };
 
 public:
@@ -349,7 +349,7 @@ void Game::RenderView()
                     (uint8_t)(currentSquare.x + dx[(p->GetDir() + 1) % 4])
                 };
 
-                if (m->isWall(leftWall))
+                if (i<=depth &&  m->isWall(leftWall))
                 {
                     //std::cout << "WALL TO THE LEFT";
                     int biggerWallSize = SCREEN_WIDTH / ((depth) * 2 +1);
@@ -369,7 +369,7 @@ void Game::RenderView()
                         }
                     }
                 }
-                if (m->isWall(rightWall))
+                if (i>= depth && m->isWall(rightWall))
                 {
                     //std::cout << "WALL TO THE RIGHT";
                     int biggerWallSize = SCREEN_WIDTH / ((depth) * 2 + 1);

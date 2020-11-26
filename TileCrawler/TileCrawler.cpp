@@ -23,7 +23,18 @@ class Player
     public:
         position GetPos(){ return pos;};
         uint8_t GetDir() { return dir; };
-        void MoveForward() {};
+        void Move(uint8_t dir) { 
+            position temp = { pos.y + dy[dir % 4], pos.x + dx[dir % 4] };
+            if (temp.x > 0 && temp.y > 0)
+            {
+                pos = temp;
+            }
+        };
+        void Turn(uint8_t add)
+        {
+            dir = ((int)dir + int(add)) % 4;
+            std::cout << "spun\ns";
+        }
 
 };
 
@@ -37,8 +48,8 @@ class Map
         {1,0,1,0,1},
         {1,0,0,0,1},
         {1,0,0,0,1},
-        {0,0,0,1,0},
-        {0,0,0,0,0}
+        {0,0,0,0,1},
+        {1,0,1,0,1}
     };
 
 public:
@@ -84,20 +95,49 @@ class Game
                 vp_cover.at(0).x2 == full_cover.at(0).x2);
         };
         screenpos ManageWallDrawing(screenpos p);
+        void Debug_PrintMap()
+        {
+            for (int i = 0; i < map_height; i++)
+            {
+                for (int j = 0; j < map_width; j++)
+                {
+                    if (p->GetPos().x == j && p->GetPos().y == i)
+                    {
+                        switch (p->GetDir())
+                        {
+                        case NORTH: std::cout << "^ " ; break;
+                        case EAST: std::cout << "> "; break;
+                        case WEST: std::cout << "< "; break;
+                        case SOUTH: std::cout << "v "; break;
+                        }
+                    }
+                    else
+                    {
+                        if (m->isWall({ (uint8_t)i,(uint8_t)j }))
+                            std::cout << "1 ";
+                        else
+                            std::cout << "0 ";
+                    }
+                }
+                std::cout << "\n";
+            }
+            std::cout << "Current dir is " << (int)p->GetDir();
+            std::cout << "\n\n";
+        }
 };
 
 screenpos Game::ManageWallDrawing(screenpos p)
 {
     bool notCovered = true;
     bool invisibleWall = false;
-    std::cout << "Initial bounds (" << p.x1 << ", " << p.x2 << ")\n";
+    //std::cout << "Initial bounds (" << p.x1 << ", " << p.x2 << ")\n";
 
     for (int i = 0; i < vp_cover.size(); i++)
     {
         if (p.x1 >= vp_cover.at(i).x1 && p.x1 <= vp_cover.at(i).x2) //if x1 is caught up under a block
         {
             notCovered = false;
-            std::cout << "The rightside case\n";
+            //std::cout << "The rightside case\n";
             p.x1 = vp_cover.at(i).x2 + 1;
             if (p.x2 > vp_cover.at(i).x2)                           //if x2 gets out from beyond the blockage
             {
@@ -123,7 +163,7 @@ screenpos Game::ManageWallDrawing(screenpos p)
             if (p.x2 >= vp_cover.at(i).x1 && p.x2 <= vp_cover.at(i).x2) //if x2 is caught under a block
             {
                 notCovered = false;
-                std::cout << "The leftside case\n";
+                //std::cout << "The leftside case\n";
                 p.x2 = vp_cover.at(i).x1-1;
 
                 if (p.x1 < vp_cover.at(i).x1)
@@ -141,7 +181,7 @@ screenpos Game::ManageWallDrawing(screenpos p)
 
     if (notCovered)
     {
-        std::cout << "This wall is fully shown\n";
+        //std::cout << "This wall is fully shown\n";
         vp_cover.push_back(p);
 
         for (int i = 0; i < vp_cover.size()-1; i++) //sort all blockages
@@ -163,17 +203,17 @@ screenpos Game::ManageWallDrawing(screenpos p)
         }
     }
 
-    if (!invisibleWall)
-        std::cout << "Final bounds (" << p.x1 << ", " << p.x2 << ")\n";
-    else
-        std::cout << "Invisible wall\n";
+   // if (!invisibleWall)
+        //std::cout << "Final bounds (" << p.x1 << ", " << p.x2 << ")\n";
+    //else
+        //std::cout << "Invisible wall\n";
     for (auto i : vp_cover)
     {
-        std::cout << "(" << i.x1 << "," << i.x2 << "), ";
+        //std::cout << "(" << i.x1 << "," << i.x2 << "), ";
         //SDL_SetRenderDrawColor(theRenderer, 0, 255, 0, 0xFF);
         //SDL_RenderDrawPoint(theRenderer, i.x2, SCREEN_HEIGHT / 2);
     }
-    std::cout << '\n';
+    //std::cout << '\n';
 
     if (p.x2 < p.x1)
         return { -1,-1 };
@@ -193,11 +233,7 @@ void Game::RenderView()
     screenSurface = SDL_GetWindowSurface(window);
 
     //SDL_FillRect(screenSurface, NULL, SDL_MapRGB(screenSurface->format, 0xFF, 0xFF, 0xFF));
-    SDL_SetRenderDrawColor(theRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
-    SDL_RenderClear(theRenderer);
-    
-    SDL_SetRenderDrawColor(theRenderer, 0,0,0, 0xFF);
-    SDL_RenderSetScale(theRenderer, 1,1);
+
 
     int wallNumber = 0;
 
@@ -221,12 +257,12 @@ void Game::RenderView()
                 middleSquare.x - (depth  - i) * (dx[(p->GetDir() + 1) % 4])
 
             };
-            std::cout << "Touched (" << (int)currentSquare.x << "," << (int)currentSquare.y << ")\n";
+            //std::cout << "Touched (" << (int)currentSquare.x << "," << (int)currentSquare.y << ")\n";
 
 
             if (m->isWall(currentSquare))
             {
-                std::cout << "WALL NUMBER ################ " << wallNumber++ << "\n";
+                //std::cout << "WALL NUMBER ################ " << wallNumber++ << "\n";
                 SDL_RenderDrawPoint(theRenderer, currentSquare.x, currentSquare.y);
                 
                 screenpos fullWall = { wallSize * i , wallSize * (i + 1) };
@@ -236,8 +272,8 @@ void Game::RenderView()
                 SDL_RenderDrawLine(theRenderer, finalWall.x1 , SCREEN_HEIGHT / 2 - wallSize / 2, finalWall.x2 ,SCREEN_HEIGHT / 2 - wallSize / 2); //top
                 SDL_RenderDrawLine(theRenderer, finalWall.x1 , SCREEN_HEIGHT / 2 + wallSize / 2, finalWall.x2 ,SCREEN_HEIGHT / 2 + wallSize / 2); //bottom
 
-                std::cout << (bool)(finalWall.x2 == fullWall.x2)<<'\n';
-                std::cout << (bool)(finalWall.x1 == fullWall.x1)<<'\n';
+                //std::cout << (bool)(finalWall.x2 == fullWall.x2)<<'\n';
+                //std::cout << (bool)(finalWall.x1 == fullWall.x1)<<'\n';
 
 
                 if (finalWall.x2 == fullWall.x2)
@@ -315,7 +351,7 @@ void Game::RenderView()
 
                 if (m->isWall(leftWall))
                 {
-                    std::cout << "WALL TO THE LEFT";
+                    //std::cout << "WALL TO THE LEFT";
                     int biggerWallSize = SCREEN_WIDTH / ((depth) * 2 +1);
                     int smallerWallSize = (SCREEN_WIDTH / ((depth + 1) * 2 + 1)+1);
                     screenpos leftSide = { biggerWallSize * (i), smallerWallSize*(i+1) };
@@ -335,7 +371,7 @@ void Game::RenderView()
                 }
                 if (m->isWall(rightWall))
                 {
-                    std::cout << "WALL TO THE RIGHT";
+                    //std::cout << "WALL TO THE RIGHT";
                     int biggerWallSize = SCREEN_WIDTH / ((depth) * 2 + 1);
                     int smallerWallSize = (SCREEN_WIDTH / ((depth + 1) * 2 + 1));
                     screenpos rightSide = { smallerWallSize * (i+2 ),  biggerWallSize * (i + 1) -1};
@@ -361,17 +397,17 @@ void Game::RenderView()
 
         }
 
-        std::cout << "Increasing depth\n";
+        //std::cout << "Increasing depth\n";
         depth++;
     }
 
     //SDL_RenderDrawPoint(theRenderer, 5, 5);
     //SDL_UpdateWindowSurface(window);
    
+    vp_cover.erase(vp_cover.begin(), vp_cover.end());
 
 
-
-    SDL_RenderPresent(theRenderer);
+ 
 }
 
 int main(int argc, char* args[])
@@ -381,6 +417,8 @@ int main(int argc, char* args[])
 
     return 0;
 }
+
+#define RENDERCYCLE SDL_RenderClear(theRenderer); SDL_RenderPresent(theRenderer);
 
 void Game::Start()
 {
@@ -402,12 +440,52 @@ void Game::Start()
         else
         {
             theRenderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+
+           
+
             RenderView();
+
+            bool quit = false;
+            SDL_Event e;
+            
+            while (!quit)
+            {
+                while (SDL_PollEvent(&e) != 0)
+                {
+                    if (e.type == SDL_QUIT)
+                    {
+                        quit = true;
+                    }
+                }
+
+                SDL_SetRenderDrawColor(theRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
+                SDL_RenderClear(theRenderer);
+
+                SDL_SetRenderDrawColor(theRenderer, 0, 0, 0, 0xFF);
+                //SDL_RenderSetScale(theRenderer, 1, 1);
+                
+                const Uint8* currentKeyStates = SDL_GetKeyboardState(NULL);
+
+                if (currentKeyStates[SDL_SCANCODE_W]){ p->Move(p->GetDir()); }
+                if (currentKeyStates[SDL_SCANCODE_S]){ p->Move(p->GetDir()+2); }
+                if (currentKeyStates[SDL_SCANCODE_UP]){ p->Move(p->GetDir()); }
+                if (currentKeyStates[SDL_SCANCODE_DOWN]){ p->Move(p->GetDir()+2); }
+                if (currentKeyStates[SDL_SCANCODE_A]){ p->Move(p->GetDir()-1); }
+                if (currentKeyStates[SDL_SCANCODE_D]){ p->Move(p->GetDir()+1); }
+                if (currentKeyStates[SDL_SCANCODE_LEFT]){ p->Turn(-1); }
+                if (currentKeyStates[SDL_SCANCODE_RIGHT]){ p->Turn(1); }
+
+                RenderView();
+                SDL_RenderPresent(theRenderer);
+                Debug_PrintMap();
+                SDL_Delay(100.0);
+
+            }
             //Get window surface
 
 
             //Wait two seconds
-            SDL_Delay(200000);
+            //SDL_Delay(200000);
         }
     }
     //Destroy window

@@ -7,7 +7,7 @@
 //Screen dimension constants
 const int SCREEN_WIDTH = 400;
 const int SCREEN_HEIGHT = 400;
-const uint8_t MAX_DEPTH = 8;
+const uint8_t MAX_DEPTH = 16;
 
 struct position { uint8_t y = 0; uint8_t x = 0; };
 struct screenpos { int x1, x2; };
@@ -75,6 +75,7 @@ class Game
 
     Player* p;
     Map* m;
+    int padding = 0;
 
     std::vector<screenpos> vp_cover; 
     //viewport coverage: used to determine and clamp backsite walls
@@ -89,7 +90,7 @@ class Game
         void RenderView();
         bool isViewportFull() {
         
-            std::vector<screenpos> full_cover = { {0, SCREEN_WIDTH} };
+            std::vector<screenpos> full_cover = { {padding, SCREEN_WIDTH-padding-1} };
             return (vp_cover.size() == full_cover.size() && 
                 vp_cover.at(0).x1 == full_cover.at(0).x1 &&
                 vp_cover.at(0).x2 == full_cover.at(0).x2);
@@ -123,6 +124,30 @@ class Game
             }
             std::cout << "Current dir is " << (int)p->GetDir();
             std::cout << "\n\n";
+        }
+
+        void changePad(int amount)
+        {
+            if (amount < 0 )
+            {
+                if (padding + amount >= 0)
+                    padding += amount;
+                else
+                    padding = 0;
+            }
+
+            else
+            {
+                if (padding + amount <= SCREEN_WIDTH / 2 - 32)
+                {
+                    padding += amount;
+                }
+                else
+                {
+                    padding = SCREEN_WIDTH / 2 - 32;
+                }
+            }
+
         }
 };
 
@@ -240,7 +265,7 @@ void Game::RenderView()
     while (depth < MAX_DEPTH && !isViewportFull())
     {
         //std::cout << "Player pos is (" << p->GetPos().x << "," << p->GetPos().y << ")\n";
-        int wallSize = SCREEN_WIDTH / (depth * 2 + 1);
+        double wallSize = (-padding*2+SCREEN_WIDTH) / (depth * 2 + 1);
 
         position middleSquare =
         {
@@ -265,7 +290,7 @@ void Game::RenderView()
                 //std::cout << "WALL NUMBER ################ " << wallNumber++ << "\n";
                 SDL_RenderDrawPoint(theRenderer, currentSquare.x, currentSquare.y);
                 
-                screenpos fullWall = { wallSize * i , wallSize * (i + 1) };
+                screenpos fullWall = { padding + wallSize * i , padding + wallSize * (i + 1) };
 
                 screenpos finalWall = ManageWallDrawing(fullWall);
 
@@ -352,9 +377,9 @@ void Game::RenderView()
                 if (i<=depth &&  m->isWall(leftWall))
                 {
                     //std::cout << "WALL TO THE LEFT";
-                    int biggerWallSize = SCREEN_WIDTH / ((depth) * 2 +1);
-                    int smallerWallSize = (SCREEN_WIDTH / ((depth + 1) * 2 + 1)+1);
-                    screenpos leftSide = { biggerWallSize * (i), smallerWallSize*(i+1) };
+                    int biggerWallSize = (-padding*2 + SCREEN_WIDTH) / ((depth) * 2 +1);
+                    int smallerWallSize = ((-padding*2 + SCREEN_WIDTH) / ((depth + 1) * 2 + 1)+1);
+                    screenpos leftSide = { padding + biggerWallSize * (i), padding + smallerWallSize*(i+1) };
                     screenpos finalLeftSide = ManageWallDrawing(leftSide);
 
                     SDL_RenderDrawLine(theRenderer, finalLeftSide.x1, SCREEN_HEIGHT / 2 - biggerWallSize / 2, finalLeftSide.x2, SCREEN_HEIGHT / 2 - smallerWallSize / 2); //top
@@ -372,9 +397,9 @@ void Game::RenderView()
                 if (i>= depth && m->isWall(rightWall))
                 {
                     //std::cout << "WALL TO THE RIGHT";
-                    int biggerWallSize = SCREEN_WIDTH / ((depth) * 2 + 1);
-                    int smallerWallSize = (SCREEN_WIDTH / ((depth + 1) * 2 + 1));
-                    screenpos rightSide = { smallerWallSize * (i+2 ),  biggerWallSize * (i + 1) -1};
+                    int biggerWallSize = (-padding*2+SCREEN_WIDTH) / ((depth) * 2 + 1);
+                    int smallerWallSize = ((-padding * 2 + SCREEN_WIDTH) / ((depth + 1) * 2 + 1));
+                    screenpos rightSide = { padding + smallerWallSize * (i+2 ), padding + biggerWallSize * (i + 1) -1};
                     screenpos finalRightSide = ManageWallDrawing(rightSide);
 
                     SDL_RenderDrawLine(theRenderer, finalRightSide.x1, SCREEN_HEIGHT / 2 - smallerWallSize / 2, finalRightSide.x2, SCREEN_HEIGHT / 2 - biggerWallSize / 2); //top
@@ -406,7 +431,10 @@ void Game::RenderView()
    
     vp_cover.erase(vp_cover.begin(), vp_cover.end());
 
-
+    SDL_RenderDrawLine(theRenderer, padding-1, padding-1, SCREEN_WIDTH-padding+1, padding - 1);
+    SDL_RenderDrawLine(theRenderer, SCREEN_WIDTH - padding + 1, padding - 1, SCREEN_WIDTH - padding + 1, SCREEN_WIDTH - padding + 1);
+    SDL_RenderDrawLine(theRenderer, padding - 1, SCREEN_WIDTH - padding + 1, SCREEN_WIDTH - padding + 1, SCREEN_WIDTH - padding + 1);
+    SDL_RenderDrawLine(theRenderer, padding - 1, SCREEN_WIDTH - padding + 1, padding - 1, padding - 1);
  
 }
 
@@ -474,6 +502,9 @@ void Game::Start()
                 if (currentKeyStates[SDL_SCANCODE_D]){ p->Move(p->GetDir()+1); }
                 if (currentKeyStates[SDL_SCANCODE_LEFT]){ p->Turn(-1); }
                 if (currentKeyStates[SDL_SCANCODE_RIGHT]){ p->Turn(1); }
+
+                if (currentKeyStates[SDL_SCANCODE_MINUS]) { changePad(3); }
+                if (currentKeyStates[SDL_SCANCODE_EQUALS]) { changePad(-3); }
 
                 RenderView();
                 SDL_RenderPresent(theRenderer);
